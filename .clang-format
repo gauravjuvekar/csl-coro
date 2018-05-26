@@ -1,0 +1,60 @@
+# The commented options are only available in the latest version of clang-format
+# (Version 6) as of this time. Please update them whenever the version available
+# in Ubuntu LTS is updated.
+---
+Language: Cpp
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: true
+  IndentBraces: false
+BreakAfterJavaFieldAnnotations: false # For Doxygen Java @ style keywords
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+ColumnLimit: 79
+DerivePointerAlignment: false
+# IncludeBlocks: Regroup
+IndentCaseLabels: false
+# IndentPPDirectives: AfterHash
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+ContinuationIndentWidth: 8
+KeepEmptyLinesAtTheStartOfBlocks: false
+MacroBlockBegin: "^((BEGIN|START)_.*|.*_(BEGIN|START))$"
+MacroBlockBegin: "^((END|STOP)_.*|.*_(END|STOP))$"
+MaxEmptyLinesToKeep: 3
+PointerAlignment: Right
+ReflowComments: true
+SortIncludes: true
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 4
+UseTab: Never
+...

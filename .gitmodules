@@ -1,0 +1,3 @@
+[submodule "lib/aint-safe"]
+	path = lib/aint-safe
+	url = https://github.com/gauravjuvekar/aint-safe.git
