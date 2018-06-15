@@ -52,12 +52,24 @@ struct CoroState {
     bool timed_wait;
     /** The timer instance if a timeout is set */
     Timer timeout;
+    /** Wait type specific data */
     union {
+        /** The condition to wait for */
         Condition *condition;
+        /** Data specific to wait on a resource */
         struct {
+            /** The resource to acquire */
             Resource *     resource;
+            /** The owner instance acquiring the resource */
             ResourceOwner *owner;
+            /** The return value if the resource is acquired passed to the
+             * coroutine */
+            RetResource_acquire retval;
         } resource;
+        /** The coroutine to wait for
+         *
+         * This may or may not be in the schedule and have any priority.
+         */
         CoroState *sub_coroutine;
     } wait;
 };
@@ -98,10 +110,11 @@ typedef NestedQueue CoroScheduleQueue;
                              NESTED_QUEUE_OPERATION_ORDER_NESTED,       \
                              NESTED_QUEUE_OPERATION_ORDER_FCFS)
 
-/** \brief Collection of priority queues to schedule tasks from
- */
+/** Collection of priority queues to schedule tasks from */
 typedef struct {
+    /** An array of #CoroScheduleQueue's, one for each priority */
     CoroScheduleQueue *const *const queues;
+    /** Total number of priority levels */
     const size_t n_priorities;
 } CoroSchedule;
 
@@ -140,11 +153,13 @@ CoroState *Coro_add_new(CoroSchedule *schedule,
 #define CORO_INLINE_SAVE_STATE_EXPLICIT(state) \
     { state->label = &&CORO_LINE_LABEL(); }
 
+
 #define CORO_SAVE_STATE_EXPLICIT(state)         \
     {                                           \
         CORO_INLINE_SAVE_STATE_EXPLICIT(state); \
         CORO_LINE_LABEL() :;                    \
     }
+
 
 #define CORO_INIT_EXPLICIT(state)                          \
     {                                                      \
@@ -152,32 +167,138 @@ CoroState *Coro_add_new(CoroSchedule *schedule,
     }
 
 
-#define CORO_YIELD_EXPLICIT(state)              \
-    {                                           \
-        CORO_INLINE_SAVE_STATE_EXPLICIT(state); \
-        state->status = CORO_SUSPENDED;         \
-        return;                                 \
-        CORO_LINE_LABEL() :;                    \
+#define CORO_IMPLICIT_TIMED                             \
+    {                                                   \
+        state->timed_wait = true;                       \
+        Timer_start_new(&state->timeout, milliseconds); \
     }
 
 
-#define CORO_AWAIT_CONDITION_EXPLICIT(state, condition_ptr)
-#define CORO_AWAIT_CONDITION_TIMED_EXPLICIT(state, condition, milliseconds)
+#define CORO_IMPLICIT_NOT_TIMED \
+    { state->timed_wait = false; }
 
 
-void func(CoroState *state, void *vars) {
-    CORO_INIT_EXPLICIT(state);
-
-    CORO_SAVE_STATE_EXPLICIT(state);
-
-    int  a  = 1;
-    CORO_SAVE_STATE_EXPLICIT(state);
-    CORO_YIELD_EXPLICIT(state);
+#define CORO_IMPLICIT_RETURN_AND_LABEL \
+    {                                  \
+        return;                        \
+        CORO_LINE_LABEL() :;           \
+    }
 
 
-    int b = 2;
-    CORO_SAVE_STATE_EXPLICIT(state);
-}
+#define CORO_YIELD_EXPLICIT(state)              \
+    {                                           \
+        CORO_INLINE_SAVE_STATE_EXPLICIT(state); \
+        state->status = CORO_STATUS_SUSPENDED;  \
+        CORO_IMPLICIT_NOT_TIMED;                \
+        CORO_IMPLICIT_RETURN_AND_LABEL;         \
+    }
+
+
+#define CORO_AWAIT_TIMED_EXPLICIT(state, milliseconds) \
+    {                                                  \
+        CORO_INLINE_SAVE_STATE_EXPLICIT(state);        \
+        state->status = CORO_STATUS_WAIT_TIMED;        \
+        CORO_IMPLICIT_TIMED;                           \
+        CORO_IMPLICIT_RETURN_AND_LABEL;                \
+    }
+
+#define CORO_AWAIT_CONDITION_EXPLICIT(state, condition_ptr) \
+    {                                                       \
+        CORO_INLINE_SAVE_STATE_EXPLICIT(state);             \
+        state->status         = CORO_STATUS_WAIT_CONDITION; \
+        state->wait.condition = condition_ptr;              \
+        CORO_IMPLICIT_NOT_TIMED;                            \
+        CORO_IMPLICIT_RETURN_AND_LABEL;                     \
+    }
+
+
+#define CORO_AWAIT_CONDITION_TIMED_EXPLICIT(                \
+        state, condition_ptr, milliseconds)                 \
+    {                                                       \
+        CORO_INLINE_SAVE_STATE_EXPLICIT(state);             \
+        state->status         = CORO_STATUS_WAIT_CONDITION; \
+        state->wait.condition = condition_ptr;              \
+        CORO_IMPLICIT_TIMED;                                \
+        CORO_IMPLICIT_RETURN_AND_LABEL;                     \
+    }
+
+
+#define CORO_AWAIT_RESOURCE_EXPLICIT(state, resource_ptr, owner_ptr)       \
+    (                                                                      \
+            {                                                              \
+                CORO_INLINE_SAVE_STATE_EXPLICIT(state);                    \
+                state->status                 = CORO_STATUS_WAIT_RESOURCE; \
+                state->wait.resource.resource = resource_ptr;              \
+                state->wait.resource.owner    = owner_ptr;                 \
+                CORO_IMPLICIT_NOT_TIMED;                                   \
+                CORO_IMPLICIT_RETURN_AND_LABEL;                            \
+            },                                                             \
+            state->wait.resource.retval)
+
+
+#define CORO_AWAIT_RESOURCE_TIMED_EXPLICIT(                                \
+        state, resource_ptr, owner_ptr, milliseconds)                      \
+    (                                                                      \
+            {                                                              \
+                CORO_INLINE_SAVE_STATE_EXPLICIT(state);                    \
+                state->status                 = CORO_STATUS_WAIT_RESOURCE; \
+                state->wait.resource.resource = resource_ptr;              \
+                state->wait.resource.owner    = owner_ptr;                 \
+                CORO_IMPLICIT_TIMED;                                       \
+                CORO_IMPLICIT_RETURN_AND_LABEL;                            \
+            },                                                             \
+            state->wait.resource.retval)
+
+
+#define CORO_AWAIT_SUB_COROUTINE_EXPLICIT(state, sub_state_ptr) \
+    {                                                           \
+        state->status             = CORO_STATUS_WAIT_SUBCORO;   \
+        state->wait.sub_coroutine = sub_state_ptr;              \
+        CORO_IMPLICIT_NOT_TIMED;                                \
+        CORO_IMPLICIT_RETURN_AND_LABEL;                         \
+    }
+
+
+#define CORO_AWAIT_SUB_COROUTINE_TIMED_EXPLICIT(              \
+        state, sub_state_ptr, milliseconds)                   \
+    {                                                         \
+        state->status             = CORO_STATUS_WAIT_SUBCORO; \
+        state->wait.sub_coroutine = sub_state_ptr;            \
+        CORO_IMPLICIT_TIMED;                                  \
+        CORO_IMPLICIT_RETURN_AND_LABEL;                       \
+    }
+
+
+#define CONF_CORO_ENABLE_IMPLICIT_MACROS 1
+
+#if CONF_CORO_ENABLE_IMPLICIT_MACROS
+#define CORO_INIT() CORO_INIT_EXPLICIT(state)
+#define CORO_YIELD() CORO_YIELD_EXPLICIT(state)
+
+#define CORO_AWAIT(on, ...)                                             \
+    _Generic(on, /* -----------------------------------------------*/   \
+             Condition *                                                \
+             : CORO_AWAIT_CONDITION_EXPLICIT(state, on, ##__VA_ARGS__), \
+               Resource *                                               \
+             : CORO_AWAIT_RESOURCE_EXPLICIT(state, on, ##__VA_ARGS__),  \
+               CoroState *                                              \
+             : CORO_AWAIT_SUB_COROUTINE_EXPLICIT(state, on, ##__VA_ARGS__))
+
+
+#define CORO_AWAIT_ATMOST(milliseconds, on, ...)                \
+    _Generic(on, /* ----------------------------------------*/  \
+             Condition *                                        \
+             : CORO_AWAIT_CONDITION_TIMED_EXPLICIT(             \
+                       state, on, ##__VA_ARGS__, milliseconds), \
+               Resource *                                       \
+             : CORO_AWAIT_RESOURCE_TIMED_EXPLICIT(              \
+                       state, on, ##__VA_ARGS__, milliseconds), \
+               CoroState *                                      \
+             : CORO_AWAIT_SUB_COROUTINE_TIMED_EXPLICIT(         \
+                     state, on, ##__VA_ARGS__, milliseconds))
+
+
+#endif
 
 
 #endif /* ifndef CORO_H */

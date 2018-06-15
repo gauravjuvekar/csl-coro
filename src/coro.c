@@ -10,6 +10,25 @@
 
 
 
+void func(CoroState *state, void *vars) {
+    int *v = vars;
+    CORO_INIT();
+
+    CORO_YIELD();
+
+    int  a  = 1;
+    CORO_YIELD();
+    CORO_YIELD();
+
+
+    int b = 2;
+    CORO_YIELD();
+}
+
+
+
+
+
 void __attribute__((noreturn)) schedule_mainloop(CoroSchedule *schedule) {
     for (size_t i = 0; i < schedule->n_priorities; i++) {
         CoroScheduleQueue *queue = schedule->queues[i];

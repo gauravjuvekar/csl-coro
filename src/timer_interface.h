@@ -37,6 +37,9 @@ typedef struct {
  *                     \p instance->timed_out will be set
  * \return A pointer that can be later passed to #Timer_cancel.
  *
+ * The \p instance->timed_out condition must be cleared by the implementation
+ * before starting the timer.
+ *
  * \post \p instance must be cancelled with #Timer_cancel before it is
  * deallocated, otherwise it will be asynchronously overwritten when the timer
  * eventually expires. This will lead to \b undefined \b behaviour.
