@@ -72,10 +72,11 @@ void Resource_release(Resource *resource, ResourceOwner *owner);
 
 /** \brief Check if the resource is currently owned by the specified owner
  * \param resource the resource
- * \param owner    the owner (self) to test for
+ * \param owner    the owner (self) to test for (may be NULL to check if
+ *                 resource is not owned by anyone)
  * \return If \p resource is currently held by \p owner
  * \warning This value, if \c true is useless if the \p resource can be
- * preempted immediately after checking for ownership. You need to ensure that
+ * preempted immediately after checking for ownership.
  */
 bool Resource_is_owned(Resource *resource, ResourceOwner *owner);
 

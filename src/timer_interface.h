@@ -35,7 +35,7 @@ typedef struct {
  *                 when milliseconds have elapsed.
  * \param milliseconds the number of milliseconds after which
  *                     \p instance->timed_out will be set
- * \return A pointer that can be later passed to
+ * \return A pointer that can be later passed to #Timer_cancel.
  *
  * \post \p instance must be cancelled with #Timer_cancel before it is
  * deallocated, otherwise it will be asynchronously overwritten when the timer
@@ -43,7 +43,7 @@ typedef struct {
  */
 extern void Timer_start_new(Timer *instance, timer_ms_t milliseconds);
 
-/** \brief Cancel a started (or expired timer)
+/** \brief Cancel a started (or expired) timer
  * \param instance The timer instance to cancel
  * \pre The instance must be initialized with #Timer_start_new, otherwise it
  * will lead to \b undefined \b behaviour.
