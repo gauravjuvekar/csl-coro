@@ -197,7 +197,7 @@ CoroState *Coro_add_new(CoroSchedule *schedule,
 #define CORO_AWAIT_TIMED_EXPLICIT(state, milliseconds) \
     {                                                  \
         CORO_INLINE_SAVE_STATE_EXPLICIT(state);        \
-        state->status = CORO_STATUS_WAIT_TIMED;        \
+        state->status = CORO_STATUS_SUSPENDED;        \
         CORO_IMPLICIT_TIMED;                           \
         CORO_IMPLICIT_RETURN_AND_LABEL;                \
     }
@@ -272,7 +272,12 @@ CoroState *Coro_add_new(CoroSchedule *schedule,
 #define CONF_CORO_ENABLE_IMPLICIT_MACROS 1
 
 #if CONF_CORO_ENABLE_IMPLICIT_MACROS
-#define CORO_INIT() CORO_INIT_EXPLICIT(state)
+#include <string.h>
+#define CORO_INIT(func_name)                   \
+    assert(strcmp(__func__, #func_name) == 0); \
+    func_name ## Vars *v = vars;                 \
+    CORO_INIT_EXPLICIT(state);
+
 #define CORO_YIELD() CORO_YIELD_EXPLICIT(state)
 
 #define CORO_AWAIT(on, ...)                                             \
